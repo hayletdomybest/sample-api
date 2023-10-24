@@ -6,31 +6,11 @@ import {
   Injectable,
 } from '@nestjs/common';
 
-import { RedisService } from '@liaoliaots/nestjs-redis';
-import { RateLimiterRedis } from 'rate-limiter-flexible';
+import { LimitRateService } from '../service/limit-rate.service';
 
 @Injectable()
 export class GetDataGuard implements CanActivate {
-  private readonly rateForIp: RateLimiterRedis;
-  private readonly rateForUser: RateLimiterRedis;
-
-  constructor(private readonly redisService: RedisService) {
-    this.rateForIp = new RateLimiterRedis({
-      storeClient: this.redisService.getClient(),
-      points: 10, // Number of points
-      duration: 60, // Per second(s)
-      blockDuration: 0,
-      keyPrefix: `get_data_limit_ip`,
-    });
-
-    this.rateForUser = new RateLimiterRedis({
-      storeClient: this.redisService.getClient(),
-      points: 5, // Number of points
-      duration: 60, // Per second(s)
-      blockDuration: 0,
-      keyPrefix: `get_data_limit_user`,
-    });
-  }
+  constructor(private readonly limitRateService: LimitRateService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -38,12 +18,21 @@ export class GetDataGuard implements CanActivate {
     if (!user) {
       throw new HttpException('Parameter: user should not be empty.', HttpStatus.BAD_REQUEST);
     }
-
+    let limitRes: { can: boolean; ip: number; id: number };
     try {
-      await this.rateForIp.consume(request.ip, 1);
-      await this.rateForUser.consume(user, 1);
+      limitRes = await this.limitRateService.consume(request.ip, user);
     } catch (e) {
-      throw new HttpException('TOO_MANY_REQUESTS', HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException('INTERNAL_SERVER_ERROR', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    if (!limitRes.can) {
+      throw new HttpException(
+        {
+          ip: limitRes.ip,
+          id: limitRes.id,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     return true;

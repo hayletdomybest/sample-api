@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
-import { DemoClient } from './client/client';
 
 export const PORT = 3000;
 
@@ -16,11 +15,4 @@ void bootstrap()
   })
   .finally(async () => {
     console.log('Sample api bootstrap finish.');
-    const client = await DemoClient.connect();
-    client.subscribe((d) => console.log(d));
-
-    setTimeout(() => {
-      console.log('client unsubscribe data');
-      client.unsubscribe();
-    }, 30000);
   });

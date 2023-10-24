@@ -7,6 +7,7 @@ import { RedisModuleOptions } from '@liaoliaots/nestjs-redis/dist/redis/interfac
 import { AppController } from './controller/app.controller';
 import { GetDataGuard } from './middleware/get-data.guard';
 import { AppService } from './service/app.service';
+import { LimitRateService } from './service/limit-rate.service';
 import { AppWsGateway } from './websocket/app.ws-gateway';
 
 @Module({
@@ -38,7 +39,7 @@ import { AppWsGateway } from './websocket/app.ws-gateway';
     ),
   ],
   controllers: [AppController],
-  providers: [AppService, GetDataGuard, AppWsGateway],
+  providers: [AppService, GetDataGuard, AppWsGateway, LimitRateService],
   exports: [AppWsGateway],
 })
 export class AppModule {}
